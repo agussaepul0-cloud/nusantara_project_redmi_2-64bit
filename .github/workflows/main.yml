@@ -1,4 +1,3 @@
-
 name: Build Nusantara Project Redmi 2 (Clean, DT2W Default)
 
 on: 
@@ -6,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     
     steps:
       - name: Checkout
