@@ -1,4 +1,4 @@
-Name: Build Nusantara Project Redmi 2 (Clean, DT2W Default)
+name: Build Nusantara Project Redmi 2 (Clean, DT2W Default)
 
 on: 
   workflow_dispatch:
