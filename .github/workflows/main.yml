@@ -9,9 +9,9 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Clear Disk Space
+      - name: Clear Disk Space & Maximize Runner Space
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 1024
@@ -20,11 +20,12 @@ jobs:
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
+          remove-docker-images: 'true'
 
       - name: Prepare Environment & Dependencies
         run: |
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32z1-dev libelf-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+          sudo apt update
+          sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32z1-dev libelf-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3 dwarves
           mkdir -p ~/bin
           curl https://storage.googleapis.com/git-repo_downloads/repo > ~/bin/repo
           chmod a+x ~/bin/repo
@@ -49,26 +50,45 @@ jobs:
           git clone https://github.com/LineageOS/android_device_xiaomi_msm8916-common device/xiaomi/msm8916-common --depth=1
           git clone https://github.com/LineageOS/android_device_xiaomi_wt88047 device/xiaomi/wt88047 --depth=1
           git clone https://github.com/LineageOS/android_kernel_xiaomi_msm8916 kernel/xiaomi/msm8916 --depth=1
-          
-      - name: Enable DT2W & System Fixes
+          git clone https://github.com/TheMuppets/proprietary_vendor_xiaomi_msm8916-common vendor/xiaomi/msm8916-common --depth=1 -b lineage-18.1
+          git clone https://github.com/TheMuppets/proprietary_vendor_xiaomi_wt88047 vendor/xiaomi/wt88047 --depth=1 -b lineage-18.1
+
+      - name: Adapt Device Tree to Nusantara & Enable DT2W
         run: |
           cd ~/nusantara
           sudo ln -sf /usr/bin/python3 /usr/bin/python
-          
-          # Injeksi properti Double Tap to Wake (DT2W) agar aktif default di build system
+
+          # Konversi otomatis path Lineage ke Nusantara di device tree
+          cd device/xiaomi/wt88047
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/vendor\/lineage/vendor\/nusantara/g' {} +
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/lineage_/nusantara_/g' {} +
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/lineage/nusantara/g' {} +
+          if [ -f lineage_wt88047.mk ]; then
+              mv lineage_wt88047.mk nusantara_wt88047.mk
+          fi
+
+          cd ~/nusantara/device/xiaomi/msm8916-common
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/vendor\/lineage/vendor\/nusantara/g' {} +
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/lineage_/nusantara_/g' {} +
+          find . -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i 's/lineage/nusantara/g' {} +
+
+          cd ~/nusantara
+          # Injeksi properti Double Tap to Wake (DT2W)
           TARGET_PROP="device/xiaomi/wt88047/system.prop"
           if [ -f "$TARGET_PROP" ]; then
               echo "persist.sys.sync.dt2w=true" >> "$TARGET_PROP"
               echo "sys.gestures.touchscreen=true" >> "$TARGET_PROP"
-          else
-              echo "persist.sys.sync.dt2w=true" >> device/xiaomi/wt88047/odm.prop || true
           fi
-          
+
       - name: Start Building (Clean Unrooted + DT2W)
         run: |
           cd ~/nusantara
+          export _JAVA_OPTIONS="-Xmx4g"
+          export USE_CCACHE=1
+          export CCACHE_EXEC=/usr/bin/ccache
+          ccache -M 10G
           source build/envsetup.sh
-          lunch nusantara_wt88047-userdebug
+          lunch nusantara_wt88047-user
           mka bacon -j$(nproc --all)
 
       - name: Upload Final ROM Result
