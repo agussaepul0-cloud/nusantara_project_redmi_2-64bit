@@ -36,7 +36,7 @@ jobs:
       - name: Sync Source Code
         run: |
           cd ~/nusantara
-          repo sync -c -j$(nproc --all) --no-tags --no-clone-bundle --force-sync --optimized-fetch --prune --depth=1
+          repo sync -c -j$(nproc --all) --no-tags --no-clone-bundle --force-sync --optimized-fetch --prune
 
       - name: Clone Device Tree, Vendor, & Kernel Redmi 2 (MSM8916)
         run: |
