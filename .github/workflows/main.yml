@@ -37,12 +37,12 @@ jobs:
           cd ~/nusantara
           git config --global user.name "Agus Saepul Rohman"
           git config --global user.email "agus@example.com"
-          repo init -u https://github.com/NusantaraProject-ROM/android_manifest.git -b 11
+          repo init -u https://github.com/NusantaraProject-ROM/android_manifest.git -b 11 --depth=1
           
       - name: Sync Source Code
         run: |
           cd ~/nusantara
-          repo sync -c -j$(nproc --all) --no-tags --no-clone-bundle --force-sync --optimized-fetch --prune
+          repo sync -c -j$(nproc --all) --no-tags --no-clone-bundle --force-sync --optimized-fetch --prune --depth=1
 
       - name: Clone Device Tree, Vendor, & Kernel Redmi 2 (MSM8916)
         run: |
@@ -52,6 +52,11 @@ jobs:
           git clone https://github.com/LineageOS/android_kernel_xiaomi_msm8916 kernel/xiaomi/msm8916 --depth=1
           git clone https://github.com/TheMuppets/proprietary_vendor_xiaomi_msm8916-common vendor/xiaomi/msm8916-common --depth=1 -b lineage-18.1
           git clone https://github.com/TheMuppets/proprietary_vendor_xiaomi_wt88047 vendor/xiaomi/wt88047 --depth=1 -b lineage-18.1
+
+      - name: Free Up Space Before Building (Hapus .repo)
+        run: |
+          cd ~/nusantara
+          rm -rf .repo
 
       - name: Adapt Device Tree to Nusantara & Enable DT2W
         run: |
@@ -84,9 +89,6 @@ jobs:
         run: |
           cd ~/nusantara
           export _JAVA_OPTIONS="-Xmx4g"
-          export USE_CCACHE=1
-          export CCACHE_EXEC=/usr/bin/ccache
-          ccache -M 10G
           source build/envsetup.sh
           lunch nusantara_wt88047-user
           mka bacon -j$(nproc --all)
